@@ -62,3 +62,49 @@ The project also includes health checking, automatic server failure detection an
                   |     Dashboard     |
                   |     :8080         |
                   +-------------------+
+
+
+                  ---
+
+## Project Files
+
+### Client
+
+- `client/client.py` — Sends requests to the load balancer.
+- `client/load_test.py` — Sends many concurrent requests for load testing.
+- `client/strategy_test.py` — Tests the load-balancing strategies.
+
+### Backend Server
+
+- `server/backend_server.py` — Runs the backend servers that receive and process requests.
+
+### Load Balancer
+
+- `load_balancer/load_balancer.py` — Main load balancer. Accepts client connections and forwards requests to backend servers.
+- `load_balancer/strategies.py` — Contains the four load-balancing algorithms:
+  - Round Robin
+  - Least Connections
+  - Random
+  - Weighted Round Robin
+- `load_balancer/health_checker.py` — Checks whether backend servers are healthy.
+- `load_balancer/metrics.py` — Collects request and latency statistics.
+- `load_balancer/server_info.py` — Stores backend server information.
+
+### Monitoring
+
+- `monitoring/metrics_server.py` — Provides the Metrics API on port `9001`.
+- `monitoring/dashboard.html` — Displays the load balancer metrics in the browser.
+
+### Configuration
+
+- `config/config.py` — Contains project configuration.
+
+### Tests
+
+- `tests/test_strategies.py` — Tests the load-balancing strategies.
+
+### Other Files
+
+- `README.md` — Project documentation.
+- `.gitignore` — Prevents unnecessary files from being uploaded to GitHub.
+- `requirements.txt` — Lists Python dependencies.

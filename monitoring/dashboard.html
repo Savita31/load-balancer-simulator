@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Load Balancer Dashboard</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f4f6f8;
+            color: #1f2937;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: auto;
+            padding: 30px;
+        }
+
+        h1 {
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            color: #6b7280;
+            margin-bottom: 20px;
+        }
+
+        /* API STATUS */
+
+        .status {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            margin-bottom: 25px;
+        }
+
+        .online {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .offline {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* METRIC CARDS */
+
+        .cards {
+            display: grid;
+            grid-template-columns:
+                repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            padding: 22px;
+            border-radius: 12px;
+
+            box-shadow:
+                0 2px 8px
+                rgba(0, 0, 0, 0.08);
+        }
+
+        .card-title {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .card-value {
+            font-size: 30px;
+            font-weight: bold;
+        }
+
+        /* SERVER SECTION */
+
+        .servers {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+
+            box-shadow:
+                0 2px 8px
+                rgba(0, 0, 0, 0.08);
+        }
+
+        .server {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            padding: 18px 5px;
+
+            border-bottom:
+                1px solid #e5e7eb;
+        }
+
+        .server:last-child {
+            border-bottom: none;
+        }
+
+        .server-name {
+            font-weight: bold;
+            margin-left: 8px;
+            margin-right: 15px;
+        }
+
+        .server-count {
+            color: #6b7280;
+        }
+
+        .healthy {
+            color: #15803d;
+            font-weight: bold;
+        }
+
+        .down {
+            color: #dc2626;
+            font-weight: bold;
+        }
+
+        /* ERROR */
+
+        .error {
+            margin-top: 20px;
+            color: #dc2626;
+            font-weight: bold;
+        }
+
+        .last-updated {
+            margin-top: 20px;
+            color: #6b7280;
+            font-size: 13px;
+        }
+
+        /* RESPONSIVE */
+
+        @media (max-width: 800px) {
+
+            .cards {
+                grid-template-columns:
+                    repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 500px) {
+
+            .cards {
+                grid-template-columns: 1fr;
+            }
+
+            .container {
+                padding: 15px;
+            }
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+    <h1>
+        Load Balancer Dashboard
+    </h1>
+
+    <div class="subtitle">
+        Real-time Load Balancer Monitoring
+    </div>
+
+
+    <!-- =====================================
+         METRICS API STATUS
+    ====================================== -->
+
+    <div
+        id="status"
+        class="status offline"
+    >
+        Connecting to Metrics API...
+    </div>
+
+
+    <!-- =====================================
+         METRIC CARDS
+    ====================================== -->
+
+    <div class="cards">
+
+        <div class="card">
+
+            <div class="card-title">
+                Total Requests
+            </div>
+
+            <div
+                id="totalRequests"
+                class="card-value"
+            >
+                0
+            </div>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-title">
+                Successful Requests
+            </div>
+
+            <div
+                id="successfulRequests"
+                class="card-value"
+            >
+                0
+            </div>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-title">
+                Failed Requests
+            </div>
+
+            <div
+                id="failedRequests"
+                class="card-value"
+            >
+                0
+            </div>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-title">
+                Average Latency
+            </div>
+
+            <div
+                id="averageLatency"
+                class="card-value"
+            >
+                0 ms
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================
+         BACKEND SERVERS
+    ====================================== -->
+
+    <div class="servers">
+
+        <h2>
+            Backend Servers
+        </h2>
+
+        <div id="serverList">
+
+            Loading server information...
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================
+         ERROR
+    ====================================== -->
+
+    <div
+        id="error"
+        class="error"
+    ></div>
+
+
+    <!-- =====================================
+         LAST UPDATED
+    ====================================== -->
+
+    <div
+        id="lastUpdated"
+        class="last-updated"
+    >
+        Last updated: --
+    </div>
+
+</div>
+
+
+<script>
+
+    /*
+     * ==========================================
+     * METRICS API
+     * ==========================================
+     */
+
+    const METRICS_URL =
+        "http://127.0.0.1:9001/metrics";
+
+
+    /*
+     * ==========================================
+     * FETCH METRICS
+     * ==========================================
+     */
+
+    async function fetchMetrics() {
+
+        try {
+
+            const response =
+                await fetch(
+                    METRICS_URL,
+                    {
+                        method: "GET",
+                        cache: "no-store"
+                    }
+                );
+
+
+            /*
+             * Check HTTP status
+             */
+
+            if (!response.ok) {
+
+                throw new Error(
+                    "HTTP Status "
+                    + response.status
+                );
+
+            }
+
+
+            /*
+             * Convert response to JSON
+             */
+
+            const data =
+                await response.json();
+
+
+            console.log(
+                "Metrics received:",
+                data
+            );
+
+
+            /*
+             * =================================
+             * API ONLINE
+             * =================================
+             */
+
+            const status =
+                document.getElementById(
+                    "status"
+                );
+
+
+            status.textContent =
+                "● Metrics API Online";
+
+
+            status.className =
+                "status online";
+
+
+            /*
+             * =================================
+             * UPDATE METRICS
+             * =================================
+             */
+
+            document.getElementById(
+                "totalRequests"
+            ).textContent =
+                data.total_requests;
+
+
+            document.getElementById(
+                "successfulRequests"
+            ).textContent =
+                data.successful_requests;
+
+
+            document.getElementById(
+                "failedRequests"
+            ).textContent =
+                data.failed_requests;
+
+
+            document.getElementById(
+                "averageLatency"
+            ).textContent =
+                data.average_latency_ms
+                + " ms";
+
+
+            /*
+             * =================================
+             * UPDATE SERVER INFORMATION
+             * =================================
+             */
+
+            const serverList =
+                document.getElementById(
+                    "serverList"
+                );
+
+
+            serverList.innerHTML = "";
+
+
+            const servers =
+                data.servers;
+
+
+            const serverIds =
+                Object.keys(
+                    servers
+                );
+
+
+            /*
+             * No servers
+             */
+
+            if (
+                serverIds.length === 0
+            ) {
+
+                serverList.innerHTML =
+                    "<p>No server information available.</p>";
+
+            }
+
+
+            /*
+             * Create server cards
+             */
+
+            serverIds.forEach(
+                function(serverId) {
+
+                    const server =
+                        servers[serverId];
+
+
+                    const row =
+                        document.createElement(
+                            "div"
+                        );
+
+
+                    row.className =
+                        "server";
+
+
+                    /*
+                     * Health status
+                     */
+
+                    let healthSymbol;
+
+                    let healthText;
+
+                    let healthClass;
+
+
+                    if (
+                        server.healthy
+                    ) {
+
+                        healthSymbol =
+                            "🟢";
+
+                        healthText =
+                            "Healthy";
+
+                        healthClass =
+                            "healthy";
+
+                    }
+
+                    else {
+
+                        healthSymbol =
+                            "🔴";
+
+                        healthText =
+                            "DOWN";
+
+                        healthClass =
+                            "down";
+
+                    }
+
+
+                    /*
+                     * Server HTML
+                     */
+
+                    row.innerHTML = `
+
+                        <div>
+
+                            <span>
+                                ${healthSymbol}
+                            </span>
+
+                            <span
+                                class="server-name"
+                            >
+                                Server ${serverId}
+                            </span>
+
+                            <span
+                                class="${healthClass}"
+                            >
+                                ${healthText}
+                            </span>
+
+                        </div>
+
+                        <div
+                            class="server-count"
+                        >
+
+                            ${server.requests}
+                            requests
+
+                            &nbsp; | &nbsp;
+
+                            ${server.active_connections}
+                            active connections
+
+                        </div>
+
+                    `;
+
+
+                    serverList.appendChild(
+                        row
+                    );
+
+                }
+            );
+
+
+            /*
+             * =================================
+             * LAST UPDATED
+             * =================================
+             */
+
+            document.getElementById(
+                "lastUpdated"
+            ).textContent =
+                "Last updated: "
+                + new Date()
+                    .toLocaleTimeString();
+
+
+            /*
+             * Clear previous error
+             */
+
+            document.getElementById(
+                "error"
+            ).textContent = "";
+
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "Metrics API error:",
+                error
+            );
+
+
+            /*
+             * =================================
+             * API OFFLINE
+             * =================================
+             */
+
+            const status =
+                document.getElementById(
+                    "status"
+                );
+
+
+            status.textContent =
+                "● Metrics API Offline";
+
+
+            status.className =
+                "status offline";
+
+
+            /*
+             * Show actual error
+             */
+
+            document.getElementById(
+                "error"
+            ).textContent =
+                "Error: "
+                + error.message;
+
+        }
+
+    }
+
+
+    /*
+     * ==========================================
+     * FIRST REQUEST
+     * ==========================================
+     */
+
+    fetchMetrics();
+
+
+    /*
+     * ==========================================
+     * REFRESH EVERY 2 SECONDS
+     * ==========================================
+     */
+
+    setInterval(
+        fetchMetrics,
+        2000
+    );
+
+</script>
+
+
+</body>
+
+</html>
